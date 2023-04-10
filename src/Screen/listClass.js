@@ -9,13 +9,14 @@ import {
   Radio,
   message,
   DatePicker,
-  Select,
-  Option,
   Checkbox,
 } from "antd";
 import React, { useEffect, useState } from "react";
 import moment from "moment";
-import { Skeleton } from "antd";
+import { getRoom } from "../services/GetRoom";
+import { deleteStudent } from "../services/DeleteStudent";
+import { addStudent } from "../services/CreateStudent";
+import { editStudent } from "../services/UpdateStudent";
 
 const { Title } = Typography;
 const onChange = (date, dateString) => {
@@ -25,20 +26,15 @@ const onChange = (date, dateString) => {
 const ClassList = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [data, setData] = useState([]);
-  const [totalStudent, setTotalStudent] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [flagEditForm, setFlagEditForm] = useState("");
   const [editedStudent, setEditedStudent] = useState(null);
-  const [createStudent, setCreateStudent] = useState(null);
+
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
-  const [bestTotalScore, setBestTotalScore] = useState(0);
-
-  const [loading, setLoading] = useState(false);
 
   const handleDeleteStudent = (studentId) => {
     setSelectedStudentId(studentId);
@@ -55,7 +51,6 @@ const ClassList = () => {
   });
 
   const showModal = (classData) => {
-    setFlagEditForm("");
     setSelectedClass(classData);
     setIsModalVisible(true);
     localStorage.setItem("classId", classData.id);
@@ -82,7 +77,6 @@ const ClassList = () => {
       dataIndex: "students",
       key: "best-score",
       render: (students) => {
-        // in ra màn hình điểm trung bình cao nhất của mỗi lớp học và tên sinh viên có điểm cao nhất
         const bestScore = students.reduce((acc, cur) => {
           return acc.average_score > cur.average_score ? acc : cur;
         });
@@ -94,7 +88,6 @@ const ClassList = () => {
       dataIndex: "students",
       key: "best-score",
       render: (students) => {
-        // in ra màn hình điểm trung bình cao nhất của mỗi lớp học và tên sinh viên có điểm cao nhất
         const bestScore = students.reduce((acc, cur) => {
           return acc.average_score > cur.average_score ? acc : cur;
         });
@@ -111,85 +104,16 @@ const ClassList = () => {
       ),
     },
   ];
-
   useEffect(() => {
-    // loading tầm 1s
-
-    fetch("https://exam.congdongcode.vn/api/list-class?id_user=4")
-      .then((response) => response.json())
-      // .then((data) => setData(data.data));
-      .then((data) => {
-        setData(data.data);
-
-        const totalStudent = data.data.map((item) => {
-          return item.students.length;
-        });
-
-        // điểm trung bình cao nhất của mỗi lớp học và tên sinh viên có điểm cao nhất
-        const bestTotalScore = data.data.map((item) => {
-          const bestScore = item.students.reduce((acc, cur) => {
-            return acc.average_score > cur.average_score ? acc : cur;
-          });
-          return {
-            nameStudent: bestScore.name,
-            diemCaoNhat: bestScore.average_score,
-          };
-        });
-
-        setTotalStudent(totalStudent);
-        setBestTotalScore(bestTotalScore);
+    getRoom()
+      .then((response) => {
+        console.log(response);
+        setData(response.data);
+      })
+      .catch((error) => {
+        console.error(error);
       });
   }, []);
-
-  const editStudent = (studentId, updatedStudent) => {
-    return fetch(`https://exam.congdongcode.vn/api/edit-student`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id_student: updatedStudent.id,
-        id_user: 4,
-        name: updatedStudent.name,
-        dob: updatedStudent.dob,
-        gender: updatedStudent.gender,
-        average_score: updatedStudent.average_score,
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(data);
-        return data;
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  };
-  const addStudent = (newStudent) => {
-    return fetch(`https://exam.congdongcode.vn/api/create-student`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id_class: classId,
-        id_user: 4,
-        name: newStudent.name,
-        dob: newStudent.dob,
-        gender: newStudent.gender,
-        //average_score: ép kiểu về số
-        average_score: parseInt(newStudent.average_score),
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(data);
-        return data;
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  };
 
   const handleEditStudent = (student, flag) => {
     setSelectedStudent(student);
@@ -197,7 +121,6 @@ const ClassList = () => {
     setIsEditModalVisible(true);
   };
   const handleAddStudent = () => {
-    setFlagEditForm("add");
     setNewStudent({
       id_class: classId,
       id_user: 4,
@@ -207,27 +130,6 @@ const ClassList = () => {
       average_score: "",
     });
     setIsAddModalVisible(true);
-  };
-
-  const deleteStudent = (studentId) => {
-    return fetch(`https://exam.congdongcode.vn/api/delete-student`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id_student: studentId,
-        id_user: 4,
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(data);
-        return data;
-      })
-      .catch((error) => {
-        console.error(error);
-      });
   };
 
   const handleDeleteOk = () => {
@@ -266,20 +168,20 @@ const ClassList = () => {
   };
 
   const handleAddOk = () => {
-    addStudent(newStudent)
-      .then((response) => {
-        console.log(response);
-        setIsAddModalVisible(false);
-        message.success("Thêm thành công");
-      })
-      .then(() => {
-        setTimeout(() => {
-          window.location.reload();
-        }, 3000);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+    addStudent(newStudent);
+    // .then((response) => {
+    //   console.log(response);
+    //   setIsAddModalVisible(false);
+    //   message.success("Thêm thành công");
+    // })
+    // .then(() => {
+    //   setTimeout(() => {
+    //     window.location.reload();
+    //   }, 3000);
+    // })
+    // .catch((error) => {
+    //   console.error(error);
+    // });
   };
 
   const totalClass = data.length;
@@ -303,7 +205,6 @@ const ClassList = () => {
 
         <Table columns={columns} dataSource={data} />
         <Modal
-          // Danh sách học sinh của: lớp 1
           title={
             `Danh sách học sinh của: ${selectedClass?.name}` +
             " với sĩ số: " +
